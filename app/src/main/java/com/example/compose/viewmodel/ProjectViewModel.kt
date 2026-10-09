@@ -1,63 +1,45 @@
 package com.example.compose.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.compose.data.ProjectRepository
 import com.example.compose.model.Project
-import com.example.compose.model.ProjectStatus
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-class ProjectViewModel : ViewModel() {
-    private val _projects = MutableStateFlow<List<Project>>(
-        listOf(
-            Project(
-                id = "1",
-                name = "Redesign do App Mobile",
-                client = "TechCorp Inc.",
-                budget = 25000.0,
-                status = ProjectStatus.EM_EXECUCAO,
-                description = "Modernização completa da UI/UX com Jetpack Compose."
-            ),
-            Project(
-                id = "2",
-                name = "Sistema de Vendas Web",
-                client = "Mercado Global",
-                budget = 40000.0,
-                status = ProjectStatus.PLANEJAMENTO,
-                description = "Plataforma e-commerce B2B responsiva."
-            ),
-            Project(
-                id = "3",
-                name = "Migração para Nuvem",
-                client = "Fintech Brasil",
-                budget = 18000.0,
-                status = ProjectStatus.CONCLUIDO,
-                description = "Migração de infraestrutura para serviços de nuvem."
-            )
-        )
-    )
-    val projects: StateFlow<List<Project>> = _projects.asStateFlow()
+class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() {
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    fun getProjectById(id: String?): Project? {
-        if (id.isNull_or_blank()) return null
-        return _projects.value.find { it.id == id }
+    val projects: StateFlow<List<Project>> = repository.allProjects
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    suspend fun getProjectById(id: String?): Project? {
+        if (id.isNullOrBlank()) return null
+        return repository.getProjectById(id)
     }
 
-    fun saveProject(project: Project) {
-        _projects.update { currentList ->
-            val index = currentList.indexOfFirst { it.id == project.id }
-            if (index >= 0) {
-                currentList.toMutableList().apply { set(index, project) }
-            } else {
-                currentList + project
-            }
+    fun saveProject(project: Project, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            repository.upsertProject(project)
+            _isLoading.value = false
+            onComplete()
         }
     }
 
     fun deleteProject(id: String) {
-        _projects.update { currentList -> currentList.filter { it.id != id } }
+        viewModelScope.launch {
+            val project = repository.getProjectById(id)
+            project?.let {
+                _isLoading.value = true
+                repository.deleteProject(it)
+                _isLoading.value = false
+            }
+        }
     }
 }
-
-private fun String?.isNull_or_blank(): Boolean = this == null || this.isBlank()

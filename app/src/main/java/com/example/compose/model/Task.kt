@@ -1,5 +1,7 @@
 package com.example.compose.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import java.util.UUID
 
 enum class Priority(val label: String) {
@@ -14,8 +16,9 @@ enum class TaskStatus(val label: String) {
     CONCLUIDA("Concluída")
 }
 
+@Entity(tableName = "tasks")
 data class Task(
-    val id: String = UUID.randomUUID().toString(),
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val title: String,
     val category: String,
     val priority: Priority = Priority.MEDIA,

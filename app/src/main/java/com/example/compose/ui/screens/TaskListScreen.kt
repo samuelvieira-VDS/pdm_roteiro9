@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -35,6 +36,7 @@ fun TaskListScreen(
     modifier: Modifier = Modifier
 ) {
     val tasks by viewModel.tasks.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     Scaffold(
         modifier = modifier,
@@ -71,7 +73,16 @@ fun TaskListScreen(
             }
         }
     ) { innerPadding ->
-        if (tasks.isEmpty()) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (tasks.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()

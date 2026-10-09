@@ -1,5 +1,7 @@
 package com.example.compose.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import java.util.UUID
 
 enum class ProjectStatus(val label: String) {
@@ -9,8 +11,9 @@ enum class ProjectStatus(val label: String) {
     PAUSADO("Pausado")
 }
 
+@Entity(tableName = "projects")
 data class Project(
-    val id: String = UUID.randomUUID().toString(),
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val name: String,
     val client: String,
     val budget: Double = 0.0,
