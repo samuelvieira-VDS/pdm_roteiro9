@@ -2,8 +2,11 @@ package com.example.compose.data
 
 import com.example.compose.model.Project
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ProjectRepository(private val projectDao: ProjectDao) {
+@Singleton
+class ProjectRepository @Inject constructor(private val projectDao: ProjectDao) {
     val allProjects: Flow<List<Project>> = projectDao.getAllProjects()
 
     suspend fun getProjectById(id: String): Project? = projectDao.getProjectById(id)

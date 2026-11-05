@@ -10,33 +10,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.navArgument
-import com.example.compose.TaskApplication
 import com.example.compose.ui.screens.ProjectFormScreen
 import com.example.compose.ui.screens.ProjectListScreen
 import com.example.compose.ui.screens.TaskFormScreen
 import com.example.compose.ui.screens.TaskListScreen
-import com.example.compose.viewmodel.AppViewModelFactory
 import com.example.compose.viewmodel.ProjectViewModel
 import com.example.compose.viewmodel.TaskViewModel
 
 @Composable
 fun AppNavigation() {
-    val context = LocalContext.current.applicationContext as TaskApplication
-    val projectViewModel: ProjectViewModel = viewModel(
-        factory = AppViewModelFactory(context.projectRepository, context.taskRepository)
-    )
-    val taskViewModel: TaskViewModel = viewModel(
-        factory = AppViewModelFactory(context.projectRepository, context.taskRepository)
-    )
+    val projectViewModel: ProjectViewModel = hiltViewModel()
+    val taskViewModel: TaskViewModel = hiltViewModel()
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route

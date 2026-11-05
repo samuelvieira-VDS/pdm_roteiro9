@@ -2,8 +2,11 @@ package com.example.compose.data
 
 import com.example.compose.model.Task
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class TaskRepository(private val taskDao: TaskDao) {
+@Singleton
+class TaskRepository @Inject constructor(private val taskDao: TaskDao) {
     val allTasks: Flow<List<Task>> = taskDao.getAllTasks()
 
     suspend fun getTaskById(id: String): Task? = taskDao.getTaskById(id)

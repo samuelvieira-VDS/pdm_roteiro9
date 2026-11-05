@@ -1,19 +1,13 @@
 package com.example.compose.data
 
-import android.content.Context
 import androidx.room.Database
-import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.compose.model.Priority
 import com.example.compose.model.Project
 import com.example.compose.model.ProjectStatus
 import com.example.compose.model.Task
 import com.example.compose.model.TaskStatus
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Database(entities = [Project::class, Task::class], version = 1, exportSchema = false)
 @TypeConverters(Converters::class)
@@ -22,34 +16,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
 
     companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
-
-        fun getDatabase(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "app_database"
-                )
-                    .addCallback(AppDatabaseCallback())
-                    .build()
-                INSTANCE = instance
-                instance
-            }
-        }
-
-        private class AppDatabaseCallback : Callback() {
-            override fun onCreate(db: SupportSQLiteDatabase) {
-                super.onCreate(db)
-                INSTANCE?.let { database ->
-                    CoroutineScope(Dispatchers.IO).launch {
-                        populateDatabase(database.projectDao(), database.taskDao())
-                    }
-                }
-            }
-        }
-
         suspend fun populateDatabase(projectDao: ProjectDao, taskDao: TaskDao) {
             projectDao.upsertProject(
                 Project(

@@ -12,9 +12,14 @@ navigationCompose = "2.8.8"
 lifecycleViewmodelCompose = "2.8.7"
 kotlinxCoroutinesTest = "1.9.0"
 room = "2.6.1"
-ksp = "2.1.10-1.0.30"
+ksp = "2.3.9"
+hilt = "2.60.1"
+hiltNavigationCompose = "1.2.0"
 
 [libraries]
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -41,4 +46,4 @@ androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = 
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
