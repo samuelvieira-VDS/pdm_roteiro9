@@ -12,9 +12,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.compose.model.Priority
-import com.example.compose.model.ProjectStatus
-import com.example.compose.model.TaskStatus
+import com.example.compose.domain.model.Priority
+import com.example.compose.domain.model.ProjectStatus
+import com.example.compose.domain.model.TaskStatus
 
 @Composable
 fun PriorityBadge(

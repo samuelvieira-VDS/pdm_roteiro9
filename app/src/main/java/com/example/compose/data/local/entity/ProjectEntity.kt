@@ -1,18 +1,12 @@
-package com.example.compose.model
+package com.example.compose.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.example.compose.domain.model.ProjectStatus
 import java.util.UUID
 
-enum class ProjectStatus(val label: String) {
-    PLANEJAMENTO("Em Planejamento"),
-    EM_EXECUCAO("Em Execução"),
-    CONCLUIDO("Concluído"),
-    PAUSADO("Pausado")
-}
-
 @Entity(tableName = "projects")
-data class Project(
+data class ProjectEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val name: String,
     val client: String,

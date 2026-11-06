@@ -43,8 +43,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.example.compose.model.Project
-import com.example.compose.model.ProjectStatus
+import com.example.compose.domain.model.Project
+import com.example.compose.domain.validation.ValidationField
+import com.example.compose.domain.model.ProjectStatus
 import com.example.compose.ui.components.CancelButton
 import com.example.compose.ui.components.CustomTextField
 import com.example.compose.ui.components.PrimaryButton
@@ -60,6 +61,8 @@ fun ProjectFormScreen(
     modifier: Modifier = Modifier
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
+    val validationErrors by viewModel.validationErrors.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     var existingProject by remember { mutableStateOf<Project?>(null) }
     var isFetching by remember { mutableStateOf(!projectId.isNullOrBlank()) }
@@ -70,12 +73,13 @@ fun ProjectFormScreen(
     var status by remember { mutableStateOf(ProjectStatus.PLANEJAMENTO) }
     var description by remember { mutableStateOf("") }
 
-    var nameError by remember { mutableStateOf(false) }
-    var clientError by remember { mutableStateOf(false) }
+    val nameError = ValidationField.PROJECT_NAME in validationErrors
+    val clientError = ValidationField.PROJECT_CLIENT in validationErrors
 
     val isEditing = !projectId.isNullOrBlank()
 
     LaunchedEffect(projectId) {
+        viewModel.clearErrors()
         if (!projectId.isNullOrBlank()) {
             isFetching = true
             val project = viewModel.getProjectById(projectId)
@@ -125,11 +129,15 @@ fun ProjectFormScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                errorMessage?.let { message ->
+                    Text(text = message, color = MaterialTheme.colorScheme.error)
+                }
+
                 CustomTextField(
                     value = name,
                     onValueChange = {
                         name = it
-                        nameError = false
+                        viewModel.clearErrors()
                     },
                     label = "Nome do Projeto *",
                     icon = Icons.Default.Folder,
@@ -141,7 +149,7 @@ fun ProjectFormScreen(
                     value = client,
                     onValueChange = {
                         client = it
-                        clientError = false
+                        viewModel.clearErrors()
                     },
                     label = "Cliente / Empresa *",
                     icon = Icons.Default.Business,
@@ -199,25 +207,17 @@ fun ProjectFormScreen(
                     PrimaryButton(
                         text = if (isEditing) "Atualizar" else "Salvar",
                         onClick = {
-                            val isNameValid = name.isNotBlank()
-                            val isClientValid = client.isNotBlank()
-
-                            nameError = !isNameValid
-                            clientError = !isClientValid
-
-                            if (isNameValid && isClientValid) {
-                                val parsedBudget = budgetText.replace(",", ".").toDoubleOrNull() ?: 0.0
-                                val projectToSave = Project(
-                                    id = existingProject?.id ?: UUID.randomUUID().toString(),
-                                    name = name.trim(),
-                                    client = client.trim(),
-                                    budget = parsedBudget,
-                                    status = status,
-                                    description = description.trim()
-                                )
-                                viewModel.saveProject(projectToSave) {
-                                    onNavigateBack()
-                                }
+                            val parsedBudget = budgetText.replace(",", ".").toDoubleOrNull() ?: 0.0
+                            val projectToSave = Project(
+                                id = existingProject?.id ?: UUID.randomUUID().toString(),
+                                name = name,
+                                client = client,
+                                budget = parsedBudget,
+                                status = status,
+                                description = description
+                            )
+                            viewModel.saveProject(projectToSave) {
+                                onNavigateBack()
                             }
                         },
                         icon = Icons.Default.Save,

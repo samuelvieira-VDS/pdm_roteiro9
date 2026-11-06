@@ -40,9 +40,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.compose.model.Priority
-import com.example.compose.model.Task
-import com.example.compose.model.TaskStatus
+import com.example.compose.domain.model.Priority
+import com.example.compose.domain.model.Task
+import com.example.compose.domain.validation.ValidationField
+import com.example.compose.domain.model.TaskStatus
 import com.example.compose.ui.components.CancelButton
 import com.example.compose.ui.components.CustomTextField
 import com.example.compose.ui.components.PrimaryButton
@@ -58,6 +59,8 @@ fun TaskFormScreen(
     modifier: Modifier = Modifier
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
+    val validationErrors by viewModel.validationErrors.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     var existingTask by remember { mutableStateOf<Task?>(null) }
     var isFetching by remember { mutableStateOf(!taskId.isNullOrBlank()) }
@@ -68,12 +71,13 @@ fun TaskFormScreen(
     var status by remember { mutableStateOf(TaskStatus.PENDENTE) }
     var dueDate by remember { mutableStateOf("") }
 
-    var titleError by remember { mutableStateOf(false) }
-    var categoryError by remember { mutableStateOf(false) }
+    val titleError = ValidationField.TASK_TITLE in validationErrors
+    val categoryError = ValidationField.TASK_CATEGORY in validationErrors
 
     val isEditing = !taskId.isNullOrBlank()
 
     LaunchedEffect(taskId) {
+        viewModel.clearErrors()
         if (!taskId.isNullOrBlank()) {
             isFetching = true
             val task = viewModel.getTaskById(taskId)
@@ -123,11 +127,15 @@ fun TaskFormScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                errorMessage?.let { message ->
+                    Text(text = message, color = MaterialTheme.colorScheme.error)
+                }
+
                 CustomTextField(
                     value = title,
                     onValueChange = {
                         title = it
-                        titleError = false
+                        viewModel.clearErrors()
                     },
                     label = "Título da Tarefa *",
                     icon = Icons.Default.Title,
@@ -139,7 +147,7 @@ fun TaskFormScreen(
                     value = category,
                     onValueChange = {
                         category = it
-                        categoryError = false
+                        viewModel.clearErrors()
                     },
                     label = "Categoria *",
                     icon = Icons.Default.Category,
@@ -204,24 +212,16 @@ fun TaskFormScreen(
                     PrimaryButton(
                         text = if (isEditing) "Atualizar" else "Salvar",
                         onClick = {
-                            val isTitleValid = title.isNotBlank()
-                            val isCategoryValid = category.isNotBlank()
-
-                            titleError = !isTitleValid
-                            categoryError = !isCategoryValid
-
-                            if (isTitleValid && isCategoryValid) {
-                                val taskToSave = Task(
-                                    id = existingTask?.id ?: UUID.randomUUID().toString(),
-                                    title = title.trim(),
-                                    category = category.trim(),
-                                    priority = priority,
-                                    status = status,
-                                    dueDate = dueDate.trim()
-                                )
-                                viewModel.saveTask(taskToSave) {
-                                    onNavigateBack()
-                                }
+                            val taskToSave = Task(
+                                id = existingTask?.id ?: UUID.randomUUID().toString(),
+                                title = title,
+                                category = category,
+                                priority = priority,
+                                status = status,
+                                dueDate = dueDate
+                            )
+                            viewModel.saveTask(taskToSave) {
+                                onNavigateBack()
                             }
                         },
                         icon = Icons.Default.Save,

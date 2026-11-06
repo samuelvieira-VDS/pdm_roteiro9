@@ -1,9 +1,9 @@
 package com.example.compose.data
 
 import androidx.room.TypeConverter
-import com.example.compose.model.Priority
-import com.example.compose.model.ProjectStatus
-import com.example.compose.model.TaskStatus
+import com.example.compose.domain.model.Priority
+import com.example.compose.domain.model.ProjectStatus
+import com.example.compose.domain.model.TaskStatus
 
 class Converters {
     @TypeConverter

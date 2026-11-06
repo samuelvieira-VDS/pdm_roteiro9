@@ -1,9 +1,9 @@
 package com.example.compose.viewmodel
 
-import com.example.compose.data.ProjectDao
-import com.example.compose.data.ProjectRepository
-import com.example.compose.model.Project
-import com.example.compose.model.ProjectStatus
+import com.example.compose.domain.repository.ProjectRepository
+import com.example.compose.domain.usecase.project.*
+import com.example.compose.domain.model.Project
+import com.example.compose.domain.model.ProjectStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -14,13 +14,17 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import com.example.compose.domain.validation.ValidationField
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
-class FakeProjectDao : ProjectDao {
+class FakeProjectRepository : ProjectRepository {
+    var saveFailure: Exception? = null
     private val projectsFlow = MutableStateFlow<List<Project>>(
         listOf(
             Project(
@@ -50,13 +54,14 @@ class FakeProjectDao : ProjectDao {
         )
     )
 
-    override fun getAllProjects(): Flow<List<Project>> = projectsFlow
+    override val allProjects: Flow<List<Project>> = projectsFlow
 
     override suspend fun getProjectById(id: String): Project? {
         return projectsFlow.value.find { it.id == id }
     }
 
-    override suspend fun upsertProject(project: Project): Long {
+    override suspend fun upsertProject(project: Project) {
+        saveFailure?.let { throw it }
         val currentList = projectsFlow.value.toMutableList()
         val index = currentList.indexOfFirst { it.id == project.id }
         if (index >= 0) {
@@ -65,28 +70,28 @@ class FakeProjectDao : ProjectDao {
             currentList.add(project)
         }
         projectsFlow.value = currentList
-        return 1L
     }
 
-    override suspend fun deleteProject(project: Project): Int {
-        val initialSize = projectsFlow.value.size
+    override suspend fun deleteProject(project: Project) {
         projectsFlow.value = projectsFlow.value.filter { it.id != project.id }
-        return initialSize - projectsFlow.value.size
     }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProjectViewModelTest {
 
+    private lateinit var repository: FakeProjectRepository
     private lateinit var viewModel: ProjectViewModel
     private val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        val fakeDao = FakeProjectDao()
-        val repository = ProjectRepository(fakeDao)
-        viewModel = ProjectViewModel(repository)
+        repository = FakeProjectRepository()
+        viewModel = ProjectViewModel(
+            ObserveProjects(repository), GetProject(repository),
+            SaveProject(repository), DeleteProject(repository)
+        )
     }
 
     @After
@@ -147,4 +152,29 @@ class ProjectViewModelTest {
         assertEquals(2, updatedList.size)
         assertNull(viewModel.getProjectById("1"))
     }
+
+    @Test
+    fun invalidInputExposesDomainErrorsAndDoesNotComplete() = runBlocking {
+        var completed = false
+        val original = viewModel.getProjectById("1")!!
+        viewModel.saveProject(original.copy(name = "   ")) { completed = true }
+        assertEquals(setOf(ValidationField.PROJECT_NAME), viewModel.validationErrors.value)
+        assertEquals(original, viewModel.getProjectById("1"))
+        assertFalse(completed)
+        assertFalse(viewModel.isLoading.value)
+        viewModel.saveProject(original) { completed = true }
+        assertTrue(completed)
+        assertTrue(viewModel.validationErrors.value.isEmpty())
+    }
+
+    @Test
+    fun persistenceFailureResetsLoadingAndKeepsFormOpen() = runBlocking {
+        var completed = false
+        repository.saveFailure = IllegalStateException("storage unavailable")
+        viewModel.saveProject(viewModel.getProjectById("1")!!) { completed = true }
+        assertFalse(viewModel.isLoading.value)
+        assertFalse(completed)
+        assertNotNull(viewModel.errorMessage.value)
+    }
+
 }

@@ -1,10 +1,10 @@
 package com.example.compose.viewmodel
 
-import com.example.compose.data.TaskDao
-import com.example.compose.data.TaskRepository
-import com.example.compose.model.Priority
-import com.example.compose.model.Task
-import com.example.compose.model.TaskStatus
+import com.example.compose.domain.repository.TaskRepository
+import com.example.compose.domain.usecase.task.*
+import com.example.compose.domain.model.Priority
+import com.example.compose.domain.model.Task
+import com.example.compose.domain.model.TaskStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -15,13 +15,17 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import com.example.compose.domain.validation.ValidationField
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
-class FakeTaskDao : TaskDao {
+class FakeTaskRepository : TaskRepository {
+    var saveFailure: Exception? = null
     private val tasksFlow = MutableStateFlow<List<Task>>(
         listOf(
             Task(
@@ -51,13 +55,14 @@ class FakeTaskDao : TaskDao {
         )
     )
 
-    override fun getAllTasks(): Flow<List<Task>> = tasksFlow
+    override val allTasks: Flow<List<Task>> = tasksFlow
 
     override suspend fun getTaskById(id: String): Task? {
         return tasksFlow.value.find { it.id == id }
     }
 
-    override suspend fun upsertTask(task: Task): Long {
+    override suspend fun upsertTask(task: Task) {
+        saveFailure?.let { throw it }
         val currentList = tasksFlow.value.toMutableList()
         val index = currentList.indexOfFirst { it.id == task.id }
         if (index >= 0) {
@@ -66,28 +71,28 @@ class FakeTaskDao : TaskDao {
             currentList.add(task)
         }
         tasksFlow.value = currentList
-        return 1L
     }
 
-    override suspend fun deleteTask(task: Task): Int {
-        val initialSize = tasksFlow.value.size
+    override suspend fun deleteTask(task: Task) {
         tasksFlow.value = tasksFlow.value.filter { it.id != task.id }
-        return initialSize - tasksFlow.value.size
     }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TaskViewModelTest {
 
+    private lateinit var repository: FakeTaskRepository
     private lateinit var viewModel: TaskViewModel
     private val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        val fakeDao = FakeTaskDao()
-        val repository = TaskRepository(fakeDao)
-        viewModel = TaskViewModel(repository)
+        repository = FakeTaskRepository()
+        viewModel = TaskViewModel(
+            ObserveTasks(repository), GetTask(repository),
+            SaveTask(repository), DeleteTask(repository)
+        )
     }
 
     @After
@@ -148,4 +153,29 @@ class TaskViewModelTest {
         assertEquals(2, updatedList.size)
         assertNull(viewModel.getTaskById("1"))
     }
+
+    @Test
+    fun invalidInputExposesDomainErrorsAndDoesNotComplete() = runBlocking {
+        var completed = false
+        val original = viewModel.getTaskById("1")!!
+        viewModel.saveTask(original.copy(title = "   ")) { completed = true }
+        assertEquals(setOf(ValidationField.TASK_TITLE), viewModel.validationErrors.value)
+        assertEquals(original, viewModel.getTaskById("1"))
+        assertFalse(completed)
+        assertFalse(viewModel.isLoading.value)
+        viewModel.saveTask(original) { completed = true }
+        assertTrue(completed)
+        assertTrue(viewModel.validationErrors.value.isEmpty())
+    }
+
+    @Test
+    fun persistenceFailureResetsLoadingAndKeepsFormOpen() = runBlocking {
+        var completed = false
+        repository.saveFailure = IllegalStateException("storage unavailable")
+        viewModel.saveTask(viewModel.getTaskById("1")!!) { completed = true }
+        assertFalse(viewModel.isLoading.value)
+        assertFalse(completed)
+        assertNotNull(viewModel.errorMessage.value)
+    }
+
 }

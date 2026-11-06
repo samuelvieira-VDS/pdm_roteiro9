@@ -3,13 +3,13 @@ package com.example.compose.data
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.example.compose.model.Priority
-import com.example.compose.model.Project
-import com.example.compose.model.ProjectStatus
-import com.example.compose.model.Task
-import com.example.compose.model.TaskStatus
+import com.example.compose.domain.model.Priority
+import com.example.compose.data.local.entity.ProjectEntity
+import com.example.compose.domain.model.ProjectStatus
+import com.example.compose.data.local.entity.TaskEntity
+import com.example.compose.domain.model.TaskStatus
 
-@Database(entities = [Project::class, Task::class], version = 1, exportSchema = false)
+@Database(entities = [ProjectEntity::class, TaskEntity::class], version = 1, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun projectDao(): ProjectDao
@@ -18,7 +18,7 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         suspend fun populateDatabase(projectDao: ProjectDao, taskDao: TaskDao) {
             projectDao.upsertProject(
-                Project(
+                ProjectEntity(
                     id = "1",
                     name = "Redesign do App Mobile",
                     client = "TechCorp Inc.",
@@ -28,7 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             )
             projectDao.upsertProject(
-                Project(
+                ProjectEntity(
                     id = "2",
                     name = "Sistema de Vendas Web",
                     client = "Mercado Global",
@@ -38,7 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             )
             projectDao.upsertProject(
-                Project(
+                ProjectEntity(
                     id = "3",
                     name = "Migração para Nuvem",
                     client = "Fintech Brasil",
@@ -49,7 +49,7 @@ abstract class AppDatabase : RoomDatabase() {
             )
 
             taskDao.upsertTask(
-                Task(
+                TaskEntity(
                     id = "1",
                     title = "Criar protótipo da interface",
                     category = "Design",
@@ -59,7 +59,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             )
             taskDao.upsertTask(
-                Task(
+                TaskEntity(
                     id = "2",
                     title = "Implementar autenticação",
                     category = "Backend",
@@ -69,7 +69,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             )
             taskDao.upsertTask(
-                Task(
+                TaskEntity(
                     id = "3",
                     title = "Revisar documentação da API",
                     category = "Documentação",
